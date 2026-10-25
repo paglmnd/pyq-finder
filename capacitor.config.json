@@ -1,0 +1,7 @@
+{
+  "appId": "com.mbbs.pyqfinder",
+  "appName": "PYQ Finder",
+  "webDir": "www",
+  "backgroundColor": "#4338ca",
+  "android": { "allowMixedContent": false }
+}

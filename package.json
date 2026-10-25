@@ -1,0 +1,17 @@
+{
+  "name": "pyq-finder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Final-year MBBS PYQ finder linked to PrepLadder lectures (offline)",
+  "scripts": {
+    "serve": "python3 -m http.server 8080"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/app": "^6.0.1",
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}
