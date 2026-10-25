@@ -10,10 +10,10 @@ const store={
 };
 const state={
   bm:new Set(store.get('bm',[])), watched:new Set(store.get('watched',[])), later:new Set(store.get('later',[])),
-  recents:store.get('recents',[]), viewed:store.get('viewed',[]), theme:store.get('theme','auto'), fs:store.get('fs',1),
+  recents:store.get('recents',[]), hist:store.get('hist',[]), theme:store.get('theme','auto'), fs:store.get('fs',1),
   group:store.get('group',true), qsubj:'All', tab:'all', q:'', shown:30
 };
-const save=()=>{store.set('bm',[...state.bm]);store.set('watched',[...state.watched]);store.set('later',[...state.later]);store.set('recents',state.recents);store.set('viewed',state.viewed);store.set('theme',state.theme);store.set('fs',state.fs);store.set('group',state.group)};
+const save=()=>{store.set('bm',[...state.bm]);store.set('watched',[...state.watched]);store.set('later',[...state.later]);store.set('recents',state.recents);store.set('hist',state.hist);store.set('theme',state.theme);store.set('fs',state.fs);store.set('group',state.group)};
 function applyTheme(){document.documentElement.setAttribute('data-theme',state.theme);document.documentElement.style.setProperty('--fs',state.fs);
   const dark=state.theme==='dark'||(state.theme==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);
   const m=document.querySelector('meta[name=theme-color]');if(m)m.content=dark?'#181c33':'#4338ca'}
@@ -28,6 +28,7 @@ const LS={'General Medicine':{c:'#1d4ed8',t:'#e8efff',p:'Medicine'},'General Sur
 const PYS=Object.keys(PY);
 const SUBJ_ALIAS={medicine:'Medicine',med:'Medicine',surgery:'Surgery',surg:'Surgery',obg:'Obstetrics & Gynaecology',obs:'Obstetrics & Gynaecology',obstetrics:'Obstetrics & Gynaecology',gynae:'Obstetrics & Gynaecology',gynaecology:'Obstetrics & Gynaecology',paediatrics:'Paediatrics',pediatrics:'Paediatrics',peds:'Paediatrics',paeds:'Paediatrics',ent:'ENT',ophthalmology:'Ophthalmology',eye:'Ophthalmology',pharmacology:'Pharmacology',pharma:'Pharmacology'};
 const ALIAS={dka:'diabetic ketoacidosis',mi:'myocardial infarction',ami:'acute myocardial infarction',acs:'acute coronary syndrome',ihd:'ischemic heart disease',mr:'mitral regurgitation',ms:'mitral stenosis',ar:'aortic regurgitation',as:'aortic stenosis',tb:'tuberculosis',copd:'chronic obstructive pulmonary disease',ards:'acute respiratory distress syndrome',uti:'urinary tract infection',hiv:'human immunodeficiency virus aids',pcos:'polycystic ovarian syndrome',pcod:'polycystic ovarian',pph:'postpartum hemorrhage',aph:'antepartum hemorrhage',iugr:'intrauterine growth restriction',iufd:'intrauterine fetal death',pet:'pre eclampsia',gdm:'gestational diabetes',mtp:'medical termination of pregnancy',iucd:'intrauterine device',ocp:'oral contraceptive',hrt:'hormone replacement therapy',ecg:'electrocardiogram',ckd:'chronic kidney disease',aki:'acute kidney injury',ra:'rheumatoid arthritis',sle:'systemic lupus erythematosus',itp:'immune thrombocytopenic purpura thrombocytopenic',cml:'chronic myeloid leukemia',aml:'acute myeloid leukemia',cll:'chronic lymphocytic leukemia',gerd:'gastroesophageal reflux',pud:'peptic ulcer',ibd:'inflammatory bowel disease',bph:'benign prostatic hyperplasia',dvt:'deep vein thrombosis',tof:'tetralogy of fallot',vsd:'ventricular septal defect',asd:'atrial septal defect',pda:'patent ductus arteriosus',ctev:'talipes equinovarus',ddh:'developmental dysplasia hip',csom:'chronic suppurative otitis media',pid:'pelvic inflammatory disease',hcg:'molar pregnancy',ors:'oral rehydration',sam:'severe acute malnutrition',lbw:'low birth weight',pem:'protein energy malnutrition',hie:'hypoxic ischemic encephalopathy',rds:'respiratory distress syndrome',ttn:'transient tachypnea',nsaid:'nonsteroidal',pcr:'polymerase',ca:'carcinoma cancer',cvs:'cardiovascular',cns:'central nervous',git:'gastrointestinal',gi:'gastrointestinal',ugib:'upper gastrointestinal bleeding',mnd:'motor neuron disease',gbs:'guillain barre',mg:'myasthenia gravis',tia:'transient ischemic attack',cva:'stroke cerebrovascular',mdr:'multidrug resistant',dots:'directly observed treatment tuberculosis',tpn:'total parenteral nutrition',gcs:'glasgow coma scale',eh:'extradural hematoma',edh:'extradural hematoma',cabg:'coronary bypass',pci:'percutaneous coronary',hf:'heart failure',chf:'congestive heart failure',htn:'hypertension',dm:'diabetes mellitus',ntm:'nontuberculous',lscs:'caesarean section',cs:'caesarean section',vbac:'vaginal birth after cesarean',art:'antiretroviral therapy',pep:'post exposure prophylaxis',pcv:'pneumococcal vaccine',ari:'acute respiratory infection',arf:'acute rheumatic fever renal failure',cn:'cranial nerve',lmn:'lower motor neuron',umn:'upper motor neuron',aids:'acquired immunodeficiency'};
+const PSYN={Medicine:'med general medicine',Surgery:'surg general surgery','Obstetrics & Gynaecology':'obg obs gynae gynaecology obstetrics',Paediatrics:'paeds peds pediatrics pedia',ENT:'ent ear nose throat',Ophthalmology:'eye ophthal',Pharmacology:'pharma'};
 const SYN={'heart attack':'myocardial infarction','sugar':'diabetes','fits':'seizure epilepsy','fit':'seizure','stones':'stone','piles':'hemorrhoids','goitre':'goiter','cataract':'cataract lens'};
 const canon=w=>w.replace(/ae/g,'e').replace(/oe/g,'e').replace(/our\b/g,'or').replace(/ph(?=[aeiou])/g,'f').replace(/ee/g,'e').replace(/([a-z])\1+/g,'$1');
 const toks=s=>(s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(Boolean));
@@ -67,6 +68,7 @@ PAPERS.forEach(p=>{
 const QMAP=new Map(QS.map(q=>[q.id,q]));
 UNITS.forEach(u=>u.links.forEach(c=>{const L=LEC.get(c);if(!L)return;L.us.push(u);if(!L.qs.includes(u.Q))L.qs.push(u.Q);L.subjSet.add(u.Q.subj);L.yrs[u.Q.year]=(L.yrs[u.Q.year]||0)+1}));
 const lecCount=L=>L.qs.length;
+function addHist(t,id){state.hist=[{t,id},...state.hist.filter(h=>!(h.t===t&&h.id===id))].slice(0,30);save()}
 // unique unit groups per lecture (by text)
 function lecGroups(L){const m=new Map();L.us.forEach(u=>{const k=normk(u.text);if(!m.has(k))m.set(k,[]);m.get(k).push(u)});return [...m.values()]}
 LEC.forEach(L=>{L.groups=lecGroups(L);L.n_q=L.groups.length;L.density=L.m?L.n_q/(L.m/60):0});
@@ -82,7 +84,7 @@ function parseQuery(raw){
     if(/^(19|20)\d\d$/.test(w)){years.push(+w);return}
     words.push(w);
   });
-  if(words.length>1){for(let i=words.length-1;i>=0;i--){const sj=SUBJ_ALIAS[words[i]];if(sj&&words.length>1){subjects.push(sj);words.splice(i,1)}}}
+  for(let i=words.length-1;i>=0;i--){const sj=SUBJ_ALIAS[words[i]];if(sj){subjects.push(sj);words.splice(i,1)}}
   const terms=words.map(w=>{
     const opts=[[canon(w)]];
     if(ALIAS[w])opts.push(ctoks(ALIAS[w]));
@@ -111,8 +113,19 @@ function scoreDoc(P,D,full,nt){
 }
 function search(raw){
   const P=parseQuery(raw);
-  const res={P,lecs:[],qs:[],partial:false};
-  if(!P.terms.length&&!P.years.length)return res;
+  const res={P,lecs:[],qs:[],papers:[],partial:false};
+  if(!P.terms.length&&!P.years.length&&!P.subjects.length)return res;
+  // papers (years / subjects / labels)
+  {const pw=[...P.years.map(String),...P.terms.map(t=>t.w)];
+   const subjw=P.subjects.length?P.subjects:[];
+   PAPERS.forEach(p=>{
+     const D=new Set(ctoks(p.subject+' '+p.label+' '+p.yl+' '+p.sitting+' '+p.pid+' '+(PSYN[p.subject]||'')));
+     if(!pw.length&&!subjw.length)return;
+     let ok=true;for(const w of pw){const cw=canon(w);if(!(D.has(cw)||[...D].some(d=>d.startsWith(cw)&&cw.length>=3))){ok=false;break}}
+     if(ok&&subjw.length&&!subjw.includes(p.subject))ok=false;
+     if(ok)res.papers.push(p);
+   });
+   res.papers.sort((a,b)=>PYS.indexOf(a.subject)-PYS.indexOf(b.subject)||(b.year||0)-(a.year||0));}
   // lectures
   if(P.terms.length){
     LEC.forEach(L=>{
@@ -198,7 +211,7 @@ function setTop(opts){
   let h='';
   if(opts.search){
     h=`<div class="row"><div class="grow"><h1>PYQ Finder</h1><div class="sub">${QS.length} questions · ${LEC.size} lectures · ${PAPERS.length} papers</div></div><button class="ic" data-act="settings" title="Settings">⚙</button></div>
-    <div class="sbox ${state.q?'has':''}"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search topic, lecture, question, year…" value="${esc(state.q)}"><button data-act="clear">✕</button></div>`;
+    <div class="sbox ${state.q?'has':''}"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search questions, lectures, papers, years, subjects…" value="${esc(state.q)}"><button data-act="clear">✕</button></div>`;
   }else{
     h=`<div class="row">${opts.back?'<button class="back" data-act="back">‹</button>':''}<div class="grow"><h1>${esc(opts.title)}</h1>${opts.sub?`<div class="sub">${opts.sub}</div>`:''}</div>${opts.right||''}</div>`;
   }
@@ -215,18 +228,21 @@ function vHome(){
   renderSearch();
 }
 function addRecent(q){q=q.trim();if(q.length<2)return;state.recents=[q,...state.recents.filter(x=>x!==q)].slice(0,12);save()}
+function histRow(h){
+  if(h.t==='l'){const L=LEC.get(h.id);if(!L)return'';const st=LS[L.s];
+    return `<a class="hrow" style="--c:${st.c};--t:${st.t}" href="#/lec/${L.c}"><span class="hi">▶</span><div><b>L${L.n} · ${esc(L.t)}</b><small>${esc(L.s)} · ${L.m} min · ${L.n_q} PYQs</small></div></a>`}
+  const [pid,si,qi]=h.id.split('-');const Q=QMAP.get(h.id);if(!Q)return'';const st=PY[Q.subj];
+  const txt=(Q.q.a[0].s||(Q.q.a[0].p[0]&&Q.q.a[0].p[0].t)||'').replace(/\s+/g,' ');
+  return `<a class="hrow" style="--c:${st.c};--t:${st.t}" href="#/paper/${Q.p.id}/${Q.si}-${Q.qi}"><span class="hi">?</span><div><b>${esc(txt.length>78?txt.slice(0,77)+'…':txt)}</b><small>${esc(Q.p.yl)} · ${st.s} · Q${Q.q.n==null?'•':Q.q.n}</small></div></a>`}
 function renderHome(){
-  const unw=[...LEC.values()].filter(L=>!state.watched.has(L.c)&&L.n_q).sort((a,b)=>b.n_q-a.n_q).slice(0,5);
-  const pop=['Aortic stenosis','DKA','Nephrotic syndrome','PCOS','Breech','Cataract','Rheumatic fever','Fracture neck femur','Thyroid','Tuberculosis','Pre-eclampsia','Status epilepticus'];
   const counts={};QS.forEach(q=>counts[q.subj]=(counts[q.subj]||0)+1);
-  let h='';
-  if(state.recents.length)h+=`<div class="sec-t">Recent searches</div><div class="chips">${state.recents.map(r=>`<button class="chip" data-act="q" data-id="${esc(r)}">↺ ${esc(r)}</button>`).join('')}</div>`;
-  h+=`<div class="sec-t">Try searching</div><div class="chips wrap">${pop.map(r=>`<button class="chip" data-act="q" data-id="${esc(r)}">${esc(r)}</button>`).join('')}</div>`;
-  h+=`<div class="sec-t">Browse by subject</div><div class="tiles">${PYS.map(s=>`<a class="tile" style="--c:${PY[s].c}" href="#/subject/${encodeURIComponent(s)}"><b>${esc(s)}</b><small>${counts[s]||0} questions</small></a>`).join('')}</div>`;
   const nl=QS.filter(q=>!q.links.size).length;
-  h+=`<a class="tile" style="--c:#6b7280;display:block;margin-top:10px" href="#/nolec"><b>Questions with no PrepLadder lecture</b><small>${nl} questions · use a textbook for these</small></a>`;
-  h+=`<div class="sec-t">High-yield lectures not watched yet</div>`+unw.map(L=>lecCard(L)).join('');
-  h+=`<div class="sec-t">Tips</div><div class="hero" style="font-size:.85em;color:var(--mut);line-height:1.6">Type a topic (“mitral”), an abbreviation (“DKA”, “PPH”), a year (“2019 surgery asthma”) or part of a question. Tap a <b>Watch</b> chip on any question to jump to its PrepLadder lecture. Search forgives spelling mistakes.</div>`;
+  let h='';
+  h+=`<div class="sec-t" style="margin-top:6px">Browse by subject</div><div class="tiles">${PYS.map(s=>`<a class="tile" style="--c:${PY[s].c}" href="#/subject/${encodeURIComponent(s)}"><b>${esc(s)}</b><small>${counts[s]||0} questions</small></a>`).join('')}</div>`;
+  const hs=state.hist.filter(x=>x.t==='l'?LEC.has(x.id):QMAP.has(x.id));
+  if(hs.length){h+=`<div class="sec-t" style="display:flex;justify-content:space-between">Recently opened<button class="chip" style="padding:2px 9px;font-size:.9em" data-act="clearhist">Clear</button></div>`+hs.slice(0,state.histAll?30:6).map(histRow).join('');if(hs.length>6&&!state.histAll)h+=`<button class="btn alt more" data-act="histall">Show all (${hs.length})</button>`}
+  if(state.recents.length)h+=`<div class="sec-t">Recent searches</div><div class="chips">${state.recents.slice(0,8).map(r=>`<button class="chip" data-act="q" data-id="${esc(r)}">↺ ${esc(r)}</button>`).join('')}</div>`;
+  h+=`<a class="hrow" style="--c:#6b7280;--t:#f3f4f6;margin-top:14px" href="#/nolec"><span class="hi">!</span><div><b>Questions with no PrepLadder lecture</b><small>${nl} questions</small></div></a>`;
   return h;
 }
 function renderSearch(){
@@ -235,14 +251,16 @@ function renderSearch(){
   const r=search(q);const re=hlRegex(r.P);
   const fq=r.qs.filter(x=>state.qsubj==='All'||x.Q.subj===state.qsubj);
   const fl=r.lecs.filter(x=>state.qsubj==='All'||x.L.subjSet.has(state.qsubj)||(LS[x.L.s].p===state.qsubj));
+  const fp=(r.papers||[]).filter(p=>state.qsubj==='All'||p.subject===state.qsubj);
   const t=state.tab;
   let h=subjChips(state.qsubj);
-  h+=`<div class="chips"><button class="chip ${t==='all'?'on':''}" data-act="tab" data-id="all">All</button><button class="chip ${t==='lec'?'on':''}" data-act="tab" data-id="lec">Lectures (${fl.length})</button><button class="chip ${t==='q'?'on':''}" data-act="tab" data-id="q">Questions (${fq.length})</button></div>`;
+  h+=`<div class="chips"><button class="chip ${t==='all'?'on':''}" data-act="tab" data-id="all">All</button><button class="chip ${t==='lec'?'on':''}" data-act="tab" data-id="lec">Lectures (${fl.length})</button><button class="chip ${t==='q'?'on':''}" data-act="tab" data-id="q">Questions (${fq.length})</button><button class="chip ${t==='p'?'on':''}" data-act="tab" data-id="p">Papers (${fp.length})</button></div>`;
   if(r.P.years.length||r.P.subjects.length)h+=`<div class="chips"><span class="tag">Filter: ${[...r.P.subjects,...r.P.years].join(', ')}</span></div>`;
   if(r.partial&&fq.length)h+=`<div class="empty" style="padding:6px">No exact match — showing partial matches</div>`;
-  if(!fl.length&&!fq.length){h+=`<div class="empty">No results for “${esc(q)}”.<br>Try a shorter word or another spelling.</div>`;view.innerHTML=h;return}
-  if(t!=='q'&&fl.length){h+=`<div class="sec-t">Lectures to watch (${fl.length})</div>`;(t==='lec'?fl:fl.slice(0,6)).forEach(x=>h+=lecCard(x.L,re));if(t==='all'&&fl.length>6)h+=`<button class="btn alt more" data-act="tab" data-id="lec">Show all ${fl.length} lectures</button>`}
-  if(t!=='lec'&&fq.length){h+=`<div class="sec-t">Questions (${fq.length})</div>`;fq.slice(0,state.shown).forEach(x=>h+=qCard(x.Q,{re}));if(fq.length>state.shown)h+=`<button class="btn alt more" data-act="more">Show more (${fq.length-state.shown} left)</button>`}
+  if(!fl.length&&!fq.length&&!fp.length){h+=`<div class="empty">No results for “${esc(q)}”.<br>Try a shorter word or another spelling.</div>`;view.innerHTML=h;return}
+  if((t==='all'||t==='p')&&fp.length){h+=`<div class="sec-t">Papers (${fp.length})</div><div class="list">`+(t==='p'?fp:fp.slice(0,6)).map(paperRow).join('')+'</div>';if(t==='all'&&fp.length>6)h+=`<button class="btn alt more" data-act="tab" data-id="p">Show all ${fp.length} papers</button>`}
+  if(t!=='q'&&t!=='p'&&fl.length){h+=`<div class="sec-t">Lectures to watch (${fl.length})</div>`;(t==='lec'?fl:fl.slice(0,6)).forEach(x=>h+=lecCard(x.L,re));if(t==='all'&&fl.length>6)h+=`<button class="btn alt more" data-act="tab" data-id="lec">Show all ${fl.length} lectures</button>`}
+  if(t!=='lec'&&t!=='p'&&fq.length){h+=`<div class="sec-t">Questions (${fq.length})</div>`;fq.slice(0,state.shown).forEach(x=>h+=qCard(x.Q,{re}));if(fq.length>state.shown)h+=`<button class="btn alt more" data-act="more">Show more (${fq.length-state.shown} left)</button>`}
   view.innerHTML=h;
 }
 function vLectures(){
@@ -261,7 +279,7 @@ function vLectures(){
 function vLecture(code){
   const L=LEC.get(code);if(!L){location.hash='#/lectures';return}
   setNav('lectures');setTop({back:true,title:`Lecture ${L.n}`,sub:esc(L.s)+' · '+esc(L.g)});
-  state.viewed=[code,...state.viewed.filter(x=>x!==code)].slice(0,8);save();
+  addHist('l',code);
   const st=LS[L.s];const w=state.watched.has(code);
   const years=Object.keys(L.yrs).map(Number).sort((a,b)=>a-b);const mx=Math.max(1,...Object.values(L.yrs));
   const direct=L.groups.filter(g=>!g.every(x=>x.apx&&x.apx[code])).length;
@@ -282,6 +300,8 @@ function vLecture(code){
   h+=`<div class="row2" style="justify-content:space-between;margin-top:14px">${i>0?`<a class="btn alt" style="text-decoration:none" href="#/lec/${sameSub[i-1].c}">‹ L${sameSub[i-1].n}</a>`:'<span></span>'}${i<sameSub.length-1?`<a class="btn alt" style="text-decoration:none" href="#/lec/${sameSub[i+1].c}">L${sameSub[i+1].n} ›</a>`:''}</div>`;
   view.innerHTML=h;
 }
+function paperRow(p){const c=PY[p.subject];const n=p.sections.reduce((a,x)=>a+x.q.length,0);
+  return `<a class="pp" style="--c:${c.c}" href="#/paper/${p.id}"><span class="yr">${esc(p.yl)}</span><div style="flex:1"><div style="font-weight:600">${esc(p.label)}${p.sitting?' · '+esc(p.sitting):''}</div><small>${p.pid} · ${n} questions</small></div><span style="color:var(--mut)">›</span></a>`}
 function vPapers(){
   setNav('papers');setTop({title:'Papers',sub:`${PAPERS.length} university papers`});
   const s=state.psub||'All';
@@ -292,12 +312,25 @@ function vPapers(){
     h+=`<a class="pp" style="--c:${c.c}" href="#/paper/${p.id}"><span class="yr">${esc(p.yl)}</span><div style="flex:1"><div style="font-weight:600">${esc(p.label)}${p.sitting?' · '+esc(p.sitting):''}</div><small>${p.pid} · ${n} questions${p.meta&&p.meta.marks?' · '+p.meta.marks+' marks':''}</small></div><span style="color:var(--mut)">›</span></a>`});
   view.innerHTML=h+'</div>';
 }
-function vSubject(name){
-  setNav('papers');setTop({back:true,title:name,sub:'All papers and questions'});
-  const c=PY[name];const list=PAPERS.filter(p=>p.subject===name).sort((a,b)=>(b.year||0)-(a.year||0));
-  const lecs=[...LEC.values()].filter(L=>L.subjSet.has(name)).sort((a,b)=>b.n_q-a.n_q).slice(0,8);
-  let h=`<div class="sec-t">Top lectures for ${esc(name)}</div>`+lecs.map(L=>lecCard(L)).join('')+`<div class="sec-t">Papers</div><div class="list">`+list.map(p=>`<a class="pp" style="--c:${c.c}" href="#/paper/${p.id}"><span class="yr">${esc(p.yl)}</span><div style="flex:1"><div style="font-weight:600">${esc(p.label)}${p.sitting?' · '+esc(p.sitting):''}</div><small>${p.pid}</small></div><span style="color:var(--mut)">›</span></a>`).join('')+'</div>';
-  view.innerHTML=h;
+function subjLecs(name){
+  return [...LEC.values()].map(L=>({L,us:L.us.filter(u=>u.Q.subj===name)})).filter(x=>x.us.length).map(x=>{const g=new Map();x.us.forEach(u=>{const k=normk(u.text);if(!g.has(k))g.set(k,[]);g.get(k).push(u)});return {L:x.L,groups:[...g.values()]}}).sort((a,b)=>b.groups.length-a.groups.length||a.L.n-b.L.n)}
+function vSubject(name,page){
+  setNav('home');const c=PY[name];
+  if(!c){location.hash='#/';return}
+  const papers=PAPERS.filter(p=>p.subject===name).sort((a,b)=>(b.year||0)-(a.year||0)||a.id-b.id);
+  if(page==='papers'){
+    setTop({back:true,title:name+' papers',sub:papers.length+' papers'});
+    let h='',cy=null;papers.forEach(p=>{h+=paperRow(p)});view.innerHTML='<div class="list">'+h+'</div>';return}
+  const sl=subjLecs(name);
+  if(page==='lectures'){
+    setTop({back:true,title:'Top lectures · '+name,sub:sl.length+' lectures, most-asked first'});
+    view.innerHTML=sl.map(({L,groups})=>{const st=LS[L.s];const w=state.watched.has(L.c);
+      return `<a class="card lecc ${w?'done':''}" style="--c:${st.c};--t:${st.t}" href="#/lec/${L.c}"><div class="top"><span class="num">${L.n}</span><div><h3>${esc(L.t)}</h3><div class="ln">${esc(L.s)} · ${L.m} min</div></div><div class="cnt"><b>${groups.length}</b>PYQ${groups.length===1?'':'s'}</div></div>
+      <div style="margin-top:8px;font-size:.82em;color:var(--mut);line-height:1.45">${groups.slice(0,3).map(g=>`<div style="padding:2px 0">• <span style="color:var(--ink)">${esc(g[0].text.length>90?g[0].text.slice(0,89)+'…':g[0].text)}</span> <small>${[...new Set(g.map(x=>x.Q.p.yl))].slice(0,4).join(', ')}</small></div>`).join('')}${groups.length>3?`<div style="color:${st.c};font-weight:700">+${groups.length-3} more PYQs ›</div>`:''}</div></a>`}).join('')||'<div class="empty">No lectures</div>';
+    return}
+  setTop({back:true,title:name,sub:(QS.filter(q=>q.subj===name).length)+' questions · '+papers.length+' papers'});
+  view.innerHTML=`<a class="card" style="--c:${c.c};display:block;text-decoration:none;color:inherit;padding:18px" href="#/subject/${encodeURIComponent(name)}/lectures"><div style="font-size:1.15em;font-weight:800;color:${c.c}">▶ Top lectures for ${esc(name)}</div><div style="color:var(--mut);font-size:.85em;margin-top:4px">${sl.length} PrepLadder lectures ranked by number of PYQs, with their questions</div></a>
+  <a class="card" style="--c:${c.c};display:block;text-decoration:none;color:inherit;padding:18px" href="#/subject/${encodeURIComponent(name)}/papers"><div style="font-size:1.15em;font-weight:800;color:${c.c}">📄 Papers</div><div style="color:var(--mut);font-size:.85em;margin-top:4px">${papers.length} university papers, year by year</div></a>`;
 }
 function vPaper(id,focus){
   const p=PMAP.get(+id);if(!p){location.hash='#/papers';return}
@@ -309,7 +342,7 @@ function vPaper(id,focus){
     s.q.forEach((q,qi)=>h+=qCard(QMAP.get(p.id+'-'+si+'-'+qi),{noopen:true}));
   });
   view.innerHTML=h;
-  if(focus){const e=document.getElementById('q-'+id+'-'+focus);if(e){e.classList.add('hl');setTimeout(()=>e.scrollIntoView({block:'center'}),30)}}
+  if(focus){addHist('q',id+'-'+focus);const e=document.getElementById('q-'+id+'-'+focus);if(e){e.classList.add('hl');setTimeout(()=>e.scrollIntoView({block:'center'}),30)}}
 }
 function vNoLec(){
   setNav('home');const l=QS.filter(q=>!q.links.size);setTop({back:true,title:'No lecture available',sub:l.length+' questions not covered by a PrepLadder lecture'});
@@ -357,7 +390,7 @@ function route(){
     case 'lectures':vLectures();break;
     case 'lec':vLecture(parts[1]);break;
     case 'papers':vPapers();break;
-    case 'subject':vSubject(decodeURIComponent(parts[1]));break;
+    case 'subject':vSubject(decodeURIComponent(parts[1]),parts[2]);break;
     case 'paper':vPaper(parts[1],parts[2]);break;
     case 'saved':vSaved();break;
     case 'nolec':vNoLec();break;
@@ -400,6 +433,8 @@ document.addEventListener('click',e=>{
     case 'later':{state.later.has(id)?state.later.delete(id):state.later.add(id);save();toast(state.later.has(id)?'Added to watch later':'Removed');rerender();break}
     case 'lsub':state.lsub=id;vLectures();break;
     case 'psub':state.psub=id;vPapers();break;
+    case 'clearhist':state.hist=[];save();renderSearch();break;
+    case 'histall':state.histAll=true;renderSearch();break;
     case 'nlf':state.nlf=id;vNoLec();break;
     case 'lfs':state.lf.subj=id;rerender();break;
     case 'stab':state.stab=id;vSaved();break;
